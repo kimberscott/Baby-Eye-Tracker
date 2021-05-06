@@ -56,7 +56,7 @@ def get_total_time(codingfile):
         
     for code in codemarks:
         if code["type"] == "codingactive":
-            return code["duration"]
+            return (code["start"], code["duration"] + code["start"])
     
 def get_looking_array(codemarks, start_ms, end_ms):
     # Codemarks is sorted array of {"start": start_ms, "type": type} objects where 
@@ -86,11 +86,11 @@ def compare_look_coding(codingfile1, codingfile2):
 
     block_size = 1000
     
-    # Assume total coding time is entire file and lengths are the same
-    total_time = get_total_time(codingfile1)
+    # Assume coded time and lengths are the same - use first file to get period to focus on
+    (start_time, end_time) = get_total_time(codingfile1)
     
-    start_times = range(0, total_time, block_size)
-    end_times = list(range(block_size, total_time, block_size)) + [total_time]
+    start_times = range(start_time, end_time, block_size)
+    end_times = list(range(block_size + start_time, end_time, block_size)) + [end_time]
     
     marks1 = get_sorted_look_starts(codingfile1)
     marks2 = get_sorted_look_starts(codingfile2)
@@ -100,11 +100,13 @@ def compare_look_coding(codingfile1, codingfile2):
         looks1 = np.asarray(get_looking_array(marks1, start, end))
         looks2 = np.asarray(get_looking_array(marks2, start, end))
         agree_count += np.sum(np.equal(looks1, looks2))
+        
+    total_time = end_time - start_time
 
     print(f"Total time coded: {total_time} ms")
     print(f"Agreement: {agree_count / total_time * 100 :.2f}%")
     
-    return agree_count / total_time
+    return (agree_count / total_time, total_time)
     
 
 if __name__ == '__main__':

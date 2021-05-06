@@ -39,6 +39,15 @@ def detect_face_opencv_dnn(net, frame, conf_threshold):
 
 
 def predict(opt):
+
+    if opt.use_tensorflow_2:
+        import tensorflow.compat.v1 as tf
+        tf.disable_v2_behavior() 
+        from tensorflow import keras # for compatibility with tensorflow 2.x - see https://github.com/keras-team/keras/releases
+    else:
+        import keras
+        import tensorflow as tf
+
     face_model_file = Path("face_model.caffemodel")
     config_file = Path("config.prototxt")
     path_to_primary_model = Path("model.h5")
@@ -141,8 +150,9 @@ def predict(opt):
                         arrow_end_x = int(face[0] + 0.1 * face[2] if class_text == "left" else face[0] + 0.9 * face[2])
                         arrow_y = int(face[1] + 0.8 * face[3])
                         popped_frame = cv2.arrowedLine(popped_frame, (arrow_start_x, arrow_y), (arrow_end_x, arrow_y), (0, 255, 0), thickness=3, tipLength=0.4)
-                cv2.imshow("frame", popped_frame)
-                cv2.waitKey(1) # Make sure display is updated
+                if opt.show_result:
+                    cv2.imshow("frame", popped_frame)
+                    cv2.waitKey(1) # Make sure display is updated
                 if opt.save_annotated_video:
                     video_output.write(popped_frame)
                 # Record "event" for change of direction if code has changed
