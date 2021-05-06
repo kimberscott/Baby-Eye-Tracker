@@ -28,7 +28,7 @@ Activate the environment:
 
 `source venv/bin/activate`
 
-Finally intall requirements using the requirements.txt file in this repository:
+Finally install requirements using the requirements.txt file in this repository:
 
 `pip install -r requirements.txt`
 
@@ -41,6 +41,8 @@ We recommend installing [Miniconda](https://docs.conda.io/en/latest/miniconda.ht
 Activate the environment
 
 `conda activate env`
+
+Then install requirements as above.
 
 # Step 3:
 

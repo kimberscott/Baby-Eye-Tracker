@@ -2,9 +2,8 @@ import numpy as np
 import argparse
 
 def get_sorted_look_starts(codingfile):
-    f = open(codingfile, 'r')
-    lines = f.readlines()[3:] # ignore header
-    f.close()
+    with open(codingfile, 'r') as f:
+        lines = f.readlines()[3:] # ignore header
 
     # Each line is in the format start, duration, type, mark\n
     codemarks = []
@@ -58,6 +57,7 @@ def get_total_time(codingfile):
         if code["type"] == "codingactive":
             return (code["start"], code["duration"] + code["start"])
     
+    
 def get_looking_array(codemarks, start_ms, end_ms):
     # Codemarks is sorted array of {"start": start_ms, "type": type} objects where 
     # type is "away", "left", or "right"
@@ -82,31 +82,56 @@ def get_looking_array(codemarks, start_ms, end_ms):
     return looking_array
     
 
-def compare_look_coding(codingfile1, codingfile2):
+def raw_agreement(coding_file_base, coding_file_comp):
+    """ 
+    Computes raw agreement (frames agreed / total frames coded) for two coding files.
+    
+    coding_file_base: path to "base" coding file (e.g., human coding) with "codingactive"
+        event which will be used to determine which interval to use
+    coding_file_comp: path to "comparison" coding file (e.g., iCatcher annotations)
+    
+    Returns: (agree_fraction, total_time, agree_fraction_lr, total_time_lr)
+    
+    agree_fraction: fraction of frames where coding files agree on label - right, left, or 
+        away. Any 'outofframe' intervals are treated as 'away'.
+    total_time: total duration of frames used, in ms
+    
+    agree_fraction_lr: fraction of frames where coding files agree on label right or left,
+        restricted to frames where coding_file_base labels the file as left or right.
+    total_time_lr: total duration of frames where coding_file_base labels the file as left
+        or right
+    """
 
     block_size = 1000
     
-    # Assume coded time and lengths are the same - use first file to get period to focus on
-    (start_time, end_time) = get_total_time(codingfile1)
+    # Assume coded time and lengths are the same across files - 
+    # use first file to get period to focus on (based on "codingactive" mark)
+    (start_time, end_time) = get_total_time(coding_file_base)
     
     start_times = range(start_time, end_time, block_size)
     end_times = list(range(block_size + start_time, end_time, block_size)) + [end_time]
     
-    marks1 = get_sorted_look_starts(codingfile1)
-    marks2 = get_sorted_look_starts(codingfile2)
+    marks1 = get_sorted_look_starts(coding_file_base)
+    marks2 = get_sorted_look_starts(coding_file_comp)
     
     agree_count = 0
+    agree_count_lr = 0
+    total_time_lr = 0
     for (start, end) in zip(start_times, end_times):
         looks1 = np.asarray(get_looking_array(marks1, start, end))
         looks2 = np.asarray(get_looking_array(marks2, start, end))
         agree_count += np.sum(np.equal(looks1, looks2))
+        looks1_in_lr = looks1 != 1
+        agree_count_lr += np.sum(np.equal(looks1[looks1_in_lr], looks2[looks1_in_lr]))
+        total_time_lr += np.sum(looks1_in_lr)
         
     total_time = end_time - start_time
-
-    print(f"Total time coded: {total_time} ms")
-    print(f"Agreement: {agree_count / total_time * 100 :.2f}%")
     
-    return (agree_count / total_time, total_time)
+    return (agree_count / total_time, total_time, agree_count_lr / total_time_lr, total_time_lr)
+    
+# TODO: raw agreement, blocked by interval
+# TODO: agreement, excluding periods close to transitions in coding_file_base
+# TODO: looking time to left / (looking time to left or right), per interval, for each
     
 
 if __name__ == '__main__':
@@ -115,4 +140,6 @@ if __name__ == '__main__':
     parser.add_argument('file2', type=str, help='Second coding file to compare to first')
     opt = parser.parse_args()
 
-    compare_look_coding(opt.file1, opt.file2)
+    (agree_fraction, total_time) = raw_agreement(opt.file1, opt.file2)
+    print(f"Total time coded: {total_time} ms")
+    print(f"Agreement: {agree_fraction * 100 :.2f}%")
