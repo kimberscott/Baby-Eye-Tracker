@@ -1,15 +1,15 @@
-# Baby-Eye-Tracker
+# iCatcher
 A CNN that classifies discrete eye gaze direction ("Left", "Right", "Away") from low-res in-the-wild infant videos (per-frame classification).
 Based on "Automatic, Real-Time Coding of Looking-While-Listening Children Videos Using Neural Networks" presented in [ICIS 2020](https://infantstudies.org/congress-2020).
 
 
 # Step 1: Clone this repository to get a copy of the code to run locally.
 
-`git clone https://github.com/yoterel/Baby-Eye-Tracker`
+`git clone https://github.com/yoterel/iCatcher.git`
 
-# Step 2: Navigate to the Baby-Eye-Tracker directory, then create a virtual environment.
+# Step 2: Navigate to the iCatcher directory, then create a virtual environment.
 
-## Windows and Linux
+## Using virtual env:
 
 Create the virtual environment:
 
@@ -28,40 +28,21 @@ Activate the environment:
 
 `source venv/bin/activate`
 
-## MacOS using Anaconda
+Finally intall requirements using the requirements.txt file in this repository:
 
-In principle you should just be able to create the virtual environment with python3 as on Linux. But installing the requirements is more straightforward using Anaconda:
+`pip install -r requirements.txt`
 
-[Install Anaconda](https://www.anaconda.com/products/individual/get-started) if needed, then create a virtual environment using conda, including pip (see [this article]( https://datumorphism.com/til/programming/python/python-anaconda-install-requirements/):
+## Using conda
 
-`conda create -n env python=3.8 anaconda pip`
+We recommend installing [Miniconda](https://docs.conda.io/en/latest/miniconda.html) for this, but you can also [Install Anaconda](https://www.anaconda.com/products/individual/get-started) if needed, then create an environment using the environment.yml file in this repository:
+
+`conda env create -n env -f environment.yml`
 
 Activate the environment
 
 `conda activate env`
 
-# Step 3: Install the requirements
-
-From the activated virtual environment, run
-
-## Regular Python environment:
-
-`pip install -r requirements.txt`
-
-If you see an error like the following on MacOS:
-
-```
-ERROR: Could not find a version that satisfies the requirement pkg-resources==0.0.0 (from -r requirements.txt (line 14)) (from versions: none)
-ERROR: No matching distribution found for pkg-resources==0.0.0 (from -r requirements.txt (line 14))
-```
-
-you can safely remove the line `pkg-resources==0.0.0` from requirements.txt and try again. pkg-resources is already included in setuptools. 
-
-## Conda environment
-
-`pip install -r requirements_conda.txt`
-
-# Step 4:
+# Step 3:
 
 - Download the latest network model & weights file [here](https://www.cs.tau.ac.il/~yotamerel/baby_eye_tracker/model.h5).
 This is a keras model h5 file which contains both the architecture and the weights.
@@ -72,9 +53,9 @@ This is a keras model h5 file which contains both the architecture and the weigh
 
   [caffemodel (contains weights)](https://www.cs.tau.ac.il/~yotamerel/baby_eye_tracker/face_model.caffemodel)
 
-Put files in the same directory as "example.py".
+Put files in the [models](models) directory.
 
-# Step 5:
+# Step 4:
 
 To run the example file with the webcam (id for default webcam is usually 0):
 
@@ -84,15 +65,31 @@ To run the example file with a video file:
 
 `python example.py --source_type file /path/to/my/video.mp4`
 
-If you're using Tensorflow 2.x (e.g. due to using Anaconda above), add the flag `--use_tensorflow_2`.
+You can save a labeled video by adding:
 
-To display an annotated video during processing, showing the face bounding box and label,
-add `--show_result`. You can also save this video using `--save_annotated_video`.
+`--output_video_path /path/to/output_video.mp4`
 
-This will save a file in the format described [here](https://osf.io/3n97m/) describing the 
-output of the automated coding. You can specify the location of this file using `--output_path <output path>`
-and the location of the annotated video (if saving) using `--output_video_path <video path>`.
+If you want tooutput annotations to a file, use:
+
+`--output_annotation /path/to/output_file.csv`
+
+By default, this will save a file in the format described [here](https://osf.io/3n97m/) describing the 
+output of the automated coding. Other formats will be added in the future.
 
 An example video file can be found [here](https://www.cs.tau.ac.il/~yotamerel/baby_eye_tracker/example.mp4).
 
 Feel free to contribute code.
+
+# Training:
+
+If you want to retrain the model from scratch / finetune it, use [train.py](train.py).
+
+**Note**: this script expects a dataset orginized in a particular way. To create such dataset follow these steps:
+
+- Gather raw video files into some folder
+- Gather label files into some other folder (these can be in any format you choose, but a parser is required - see below)
+- Use "create_dataset_from_videos" in [dataset.py](dataset.py) script to automatically extract faces from each frame into a output folder (with subfolders away, left and right). Notice this requires creating your own parser - see [parsers.py](parsers.py) for examples.
+- Use "create_custom_dataset" in [dataset.py](dataset.py) script to further process the dataset into the final form (we recommend using default values unless architectural changes are made to the network). The final dataset structure will be a folder containing the subfolders {train, validation, holdout} each with their own subfolders {away, left, right}, consisting of 5-tuples of non-consecutive frames from the original videos in the appropriate class.
+- Finally, use [train.py](train.py) to train the network.
+
+For more detailed information, see function documentation in code.
